@@ -111,27 +111,47 @@ function showHourlyForecast() {
 }
 
 function showNearbyCities() {
-  const nearbyCities = ['Dubno', 'Kostopil', 'Zdolbuniv']; // smaller nearby cities
-  const nearbyContent = document.getElementById('nearby-cities-content');
-  nearbyContent.innerHTML = '';
+  const url = `https://api.openweathermap.org/data/2.5/find?lat=${currentCityLat}&lon=${currentCityLon}&cnt=5&appid=${apiKey}&units=metric`;
+  fetchWeather(url)
+    .then(data => {
+      const nearbyContent = document.getElementById('nearby-cities-content');
+      nearbyContent.innerHTML = '';
 
-  nearbyCities.forEach(city => {
-    const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
-    fetchWeather(url)
-      .then(data => {
+      data.list.forEach(city => {
         const cityCard = `
           <div class="city-card">
-            <p>${data.name}</p>
-            <p><img src="https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png" alt="weather icon"> ${Math.round(data.main.temp)}°C</p>
+            <p>${city.name}</p>
+            <p><img src="https://openweathermap.org/img/wn/${city.weather[0].icon}@2x.png" alt="weather icon"> ${Math.round(city.main.temp)}°C</p>
           </div>
         `;
         nearbyContent.innerHTML += cityCard;
-      })
-      .catch(err => {
-        nearbyContent.innerHTML += `<p>Error fetching weather for ${city}: ${err.message}</p>`;
       });
-  });
+    })
+    .catch(err => {
+      const nearbyContent = document.getElementById('nearby-cities-content');
+      nearbyContent.innerHTML = `<p>Error fetching nearby cities: ${err.message}</p>`;
+    });
 }
+
+function getCityCoordinates(city) {
+  const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}`;
+  return fetchWeather(url).then(data => ({
+    lat: data.coord.lat,
+    lon: data.coord.lon
+  }));
+}
+
+searchButton.addEventListener('click', () => {
+  const city = cityInput.value.trim();
+  if (city) {
+    currentCity = city;
+    getCityCoordinates(city).then(coords => {
+      currentCityLat = coords.lat;
+      currentCityLon = coords.lon;
+      showTodayWeather();
+    });
+  }
+});
 
 function showForecastWeather() {
   const url = `https://api.openweathermap.org/data/2.5/forecast?q=${currentCity}&appid=${apiKey}&units=metric`;
