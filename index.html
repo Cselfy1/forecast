@@ -8,50 +8,59 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="background"></div>
-  <div class="container">
+  <div class="wrapper">
     <header>
       <h1>Weather Forecast</h1>
       <nav>
         <button id="today-tab" class="active">Today</button>
-        <button id="forecast-tab">5-day Forecast</button>
+        <button id="forecast-tab">5-Day Forecast</button>
       </nav>
-      <div id="search-container">
-        <input type="text" id="city-input" placeholder="Enter city">
+      <div class="search-container">
+        <input type="text" id="city-input" placeholder="Enter city name">
         <button id="search-button">Search</button>
       </div>
     </header>
 
-    <main id="content">
-      <div class="forecast-content">
-        <div class="forecast-card">
-          <img src="overcast-icon.png" alt="Overcast">
-          <div class="weather-details">
-            <p>Overcast Clouds</p>
-          </div>
-          <div class="temp">12°C</div>
+    <main>
+      <section id="error-message" class="hidden">
+        <h2>City could not be found 😢</h2>
+      </section>
+
+      <section id="current-weather">
+        <div class="current-overview">
+          <h2>Today’s Weather in <span id="city-name">Your City</span></h2>
+          <p>Date: <span id="date"></span></p>
+          <img id="weather-icon" src="" alt="Weather Icon">
+          <p id="description"></p>
+          <p>Temperature: <span id="temperature"></span>°C</p>
+          <p>Feels like: <span id="feels-like"></span>°C</p>
+          <p>Sunrise: <span id="sunrise"></span></p>
+          <p>Sunset: <span id="sunset"></span></p>
+          <p>Day length: <span id="day-length"></span></p>
         </div>
-        <div class="forecast-card">
-          <img src="scattered-clouds-icon.png" alt="Scattered Clouds">
-          <div class="weather-details">
-            <p>Scattered Clouds</p>
-          </div>
-          <div class="temp">15°C</div>
+
+        <div class="hourly-forecast">
+          <h3>Hourly Forecast</h3>
+          <div id="hourly-container"></div>
         </div>
-        <div class="forecast-card">
-          <img src="rain-icon.png" alt="Rain">
-          <div class="weather-details">
-            <p>Light Rain</p>
-          </div>
-          <div class="temp">10°C</div>
+
+        <div class="nearby-cities">
+          <h3>Nearby Cities</h3>
+          <div id="nearby-cities-container"></div>
         </div>
-      </div>
+      </section>
+
+      <section id="forecast" class="hidden">
+        <h2>5-Day Forecast</h2>
+        <div id="forecast-container"></div>
+      </section>
     </main>
 
     <footer>
-      <p>Weather App by Volodymyr</p>
+      <p>Weather App © 2025</p>
     </footer>
   </div>
+
   <script src="script.js"></script>
 </body>
 </html>

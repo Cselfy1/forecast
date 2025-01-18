@@ -1,216 +1,172 @@
-const apiKey = '';
-const content = document.getElementById('content');
-const cityInput = document.getElementById('city-input');
-const searchButton = document.getElementById('search-button');
-const todayTab = document.getElementById('today-tab');
-const forecastTab = document.getElementById('forecast-tab');
+const API_KEY = "c6a47cde14f744826f9e82457fd3213b";
+const todayTab = document.getElementById("today-tab");
+const forecastTab = document.getElementById("forecast-tab");
+const currentWeatherSection = document.getElementById("current-weather");
+const forecastSection = document.getElementById("forecast");
+const errorMessage = document.getElementById("error-message");
+const cityInput = document.getElementById("city-input");
+const searchButton = document.getElementById("search-button");
 
-let currentCity = 'Rivne'; 
+let currentCity = "Rivne";
 
-todayTab.addEventListener('click', () => {
-  setActiveTab('today');
-  showTodayWeather();
-});
+// today's weather
+async function fetchWeather(city) {
+  try {
+    const response = await fetch(
+      `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${API_KEY}`
+    );
+    if (!response.ok) throw new Error("City not found");
+    const data = await response.json();
+    displayTodayWeather(data);
+    fetchHourlyWeather(data.coord.lat, data.coord.lon);
+    fetchNearbyCities(data.coord.lat, data.coord.lon);
+  } catch (error) {
+    showError();
+  }
+}
 
-forecastTab.addEventListener('click', () => {
-  setActiveTab('forecast');
-  showForecastWeather();
-});
+// 5-day forecast
+async function fetch5DayForecast(city) {
+  try {
+    const response = await fetch(
+      `https://api.openweathermap.org/data/2.5/forecast?q=${city}&units=metric&appid=${API_KEY}`
+    );
+    if (!response.ok) throw new Error("City not found");
+    const data = await response.json();
+    display5DayForecast(data);
+  } catch (error) {
+    showError();
+  }
+}
 
-searchButton.addEventListener('click', () => {
+// hourly weather
+async function fetchHourlyWeather(lat, lon) {
+  const response = await fetch(
+    `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`
+  );
+  const data = await response.json();
+  displayHourlyWeather(data.list.slice(0, 8)); // 8 hours
+}
+
+// nearby cities
+async function fetchNearbyCities(lat, lon) {
+  const response = await fetch(
+    `https://api.openweathermap.org/data/2.5/find?lat=${lat}&lon=${lon}&cnt=5&units=metric&appid=${API_KEY}`
+  );
+  const data = await response.json();
+  displayNearbyCities(data.list);
+}
+
+function displayTodayWeather(data) {
+  errorMessage.classList.add("hidden");
+  currentWeatherSection.classList.remove("hidden");
+  forecastSection.classList.add("hidden");
+
+  // fill in weather data
+  document.getElementById("city-name").textContent = data.name;
+  document.getElementById("date").textContent = new Date().toLocaleDateString();
+  document.getElementById("weather-icon").src = `http://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
+  document.getElementById("description").textContent = data.weather[0].description;
+  document.getElementById("temperature").textContent = Math.round(data.main.temp);
+  document.getElementById("feels-like").textContent = Math.round(data.main.feels_like);
+  document.getElementById("sunrise").textContent = new Date(
+    data.sys.sunrise * 1000
+  ).toLocaleTimeString();
+  document.getElementById("sunset").textContent = new Date(
+    data.sys.sunset * 1000
+  ).toLocaleTimeString();
+  const dayLength = (data.sys.sunset - data.sys.sunrise) / 3600;
+  document.getElementById("day-length").textContent = `${dayLength.toFixed(2)} hours`;
+}
+
+// display hourly weather
+function displayHourlyWeather(hourlyData) {
+  const hourlyContainer = document.getElementById("hourly-container");
+  hourlyContainer.innerHTML = "";
+  hourlyData.forEach((hour) => {
+    const card = document.createElement("div");
+    card.className = "hourly-card";
+    card.innerHTML = `
+      <p>${new Date(hour.dt * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
+      <img src="http://openweathermap.org/img/wn/${hour.weather[0].icon}.png" alt="Weather Icon">
+      <p>${hour.weather[0].description}</p>
+      <p>${Math.round(hour.main.temp)}°C</p>
+      <p>Feels like: ${Math.round(hour.main.feels_like)}°C</p>
+      <p>Wind: ${hour.wind.speed} m/s</p>
+    `;
+    hourlyContainer.appendChild(card);
+  });
+}
+
+// display nearby cities
+function displayNearbyCities(cities) {
+  const nearbyContainer = document.getElementById("nearby-cities-container");
+  nearbyContainer.innerHTML = "";
+  cities.forEach((city) => {
+    const card = document.createElement("div");
+    card.className = "nearby-card";
+    card.innerHTML = `
+      <p>${city.name}</p>
+      <img src="http://openweathermap.org/img/wn/${city.weather[0].icon}.png" alt="Weather Icon">
+      <p>${Math.round(city.main.temp)}°C</p>
+    `;
+    nearbyContainer.appendChild(card);
+  });
+}
+
+// display 5-day forecast
+function display5DayForecast(data) {
+  const forecastContainer = document.getElementById("forecast-container");
+  forecastContainer.innerHTML = "";
+
+  const dailyData = {};
+  data.list.forEach((item) => {
+    const date = item.dt_txt.split(" ")[0];
+    if (!dailyData[date]) {
+      dailyData[date] = item;
+    }
+  });
+
+  Object.values(dailyData).forEach((day) => {
+    const card = document.createElement("div");
+    card.className = "forecast-card";
+    card.innerHTML = `
+      <p>${new Date(day.dt * 1000).toLocaleDateString()}</p>
+      <img src="http://openweathermap.org/img/wn/${day.weather[0].icon}.png" alt="Weather Icon">
+      <p>${day.weather[0].description}</p>
+      <p>Temp: ${Math.round(day.main.temp)}°C</p>
+    `;
+    forecastContainer.appendChild(card);
+  });
+}
+
+function showError() {
+  errorMessage.classList.remove("hidden");
+  currentWeatherSection.classList.add("hidden");
+  forecastSection.classList.add("hidden");
+}
+
+searchButton.addEventListener("click", () => {
   const city = cityInput.value.trim();
   if (city) {
-    currentCity = city;
-    showTodayWeather();
+    fetchWeather(city);
+    fetch5DayForecast(city);
   }
 });
 
-function setActiveTab(tab) {
-  if (tab === 'today') {
-    todayTab.classList.add('active');
-    forecastTab.classList.remove('active');
-  } else {
-    forecastTab.classList.add('active');
-    todayTab.classList.remove('active');
-  }
-}
-
-function fetchWeather(url) {
-  return fetch(url)
-    .then(response => {
-      if (!response.ok) throw new Error('City not found');
-      return response.json();
-    });
-}
-
-function showTodayWeather() {
-  const url = `https://api.openweathermap.org/data/2.5/weather?q=${currentCity}&appid=${apiKey}&units=metric`;
-  fetchWeather(url)
-    .then(data => {
-      const sunrise = new Date(data.sys.sunrise * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const sunset = new Date(data.sys.sunset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const duration = calculateDayDuration(data.sys.sunrise, data.sys.sunset);
-
-      content.innerHTML = `
-        <div class="weather-card">
-          <img src="https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png" alt="weather icon">
-          <div class="temp">
-            <h2>Today's Weather in ${data.name}</h2>
-            <p>Temperature: ${Math.round(data.main.temp)}°C (Feels like: ${Math.round(data.main.feels_like)}°C)</p>
-          </div>
-          <div class="info">
-            <p>Date: ${new Date().toLocaleDateString()}</p>
-            <p>${data.weather[0].description} ${getWeatherEmoji(data.weather[0].main)}</p>
-            <p>Sunrise: ${sunrise}</p>
-            <p>Sunset: ${sunset}</p>
-            <p>Day Duration: ${duration}</p>
-          </div>
-        </div>
-        <div class="hourly-forecast">
-          <h3>Hourly Forecast</h3>
-          <div id="hourly-forecast-content"></div>
-        </div>
-        <div class="nearby-cities">
-          <h3>Nearby Cities</h3>
-          <div id="nearby-cities-content"></div>
-        </div>
-      `;
-
-      showHourlyForecast();
-      showNearbyCities();
-    })
-    .catch(err => {
-      content.innerHTML = `<p>City could not be found 😢</p>`;
-    });
-}
-
-function showHourlyForecast() {
-  const url = `https://api.openweathermap.org/data/2.5/forecast?q=${currentCity}&appid=${apiKey}&units=metric`;
-  fetchWeather(url)
-    .then(data => {
-      const hourlyContent = document.getElementById('hourly-forecast-content');
-      hourlyContent.innerHTML = '';
-
-      data.list.slice(0, 8).forEach(item => {
-        const time = new Date(item.dt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const hourCard = `
-          <div class="hour-card">
-            <p>${time}</p>
-            <p><img src="https://openweathermap.org/img/wn/${item.weather[0].icon}@2x.png" alt="weather icon"> ${item.weather[0].description} ${getWeatherEmoji(item.weather[0].main)}</p>
-            <p>Temperature: ${Math.round(item.main.temp)}°C (Feels like: ${Math.round(item.main.feels_like)}°C)</p>
-            <p>Wind: ${item.wind.speed} m/s, ${item.wind.deg}°</p>
-          </div>
-        `;
-        hourlyContent.innerHTML += hourCard;
-      });
-    })
-    .catch(err => {
-      const hourlyContent = document.getElementById('hourly-forecast-content');
-      hourlyContent.innerHTML = `<p>Error fetching hourly forecast: ${err.message}</p>`;
-    });
-}
-
-function showNearbyCities() {
-  const url = `https://api.openweathermap.org/data/2.5/find?lat=${currentCityLat}&lon=${currentCityLon}&cnt=5&appid=${apiKey}&units=metric`;
-  fetchWeather(url)
-    .then(data => {
-      const nearbyContent = document.getElementById('nearby-cities-content');
-      nearbyContent.innerHTML = '';
-
-      data.list.forEach(city => {
-        const cityCard = `
-          <div class="city-card">
-            <p>${city.name}</p>
-            <p><img src="https://openweathermap.org/img/wn/${city.weather[0].icon}@2x.png" alt="weather icon"> ${Math.round(city.main.temp)}°C</p>
-          </div>
-        `;
-        nearbyContent.innerHTML += cityCard;
-      });
-    })
-    .catch(err => {
-      const nearbyContent = document.getElementById('nearby-cities-content');
-      nearbyContent.innerHTML = `<p>Error fetching nearby cities: ${err.message}</p>`;
-    });
-}
-
-function getCityCoordinates(city) {
-  const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}`;
-  return fetchWeather(url).then(data => ({
-    lat: data.coord.lat,
-    lon: data.coord.lon
-  }));
-}
-
-searchButton.addEventListener('click', () => {
-  const city = cityInput.value.trim();
-  if (city) {
-    currentCity = city;
-    getCityCoordinates(city).then(coords => {
-      currentCityLat = coords.lat;
-      currentCityLon = coords.lon;
-      showTodayWeather();
-    });
-  }
+todayTab.addEventListener("click", () => {
+  todayTab.classList.add("active");
+  forecastTab.classList.remove("active");
+  currentWeatherSection.classList.remove("hidden");
+  forecastSection.classList.add("hidden");
 });
 
-function showForecastWeather() {
-  const url = `https://api.openweathermap.org/data/2.5/forecast?q=${currentCity}&appid=${apiKey}&units=metric`;
-  fetchWeather(url)
-    .then(data => {
-      content.innerHTML = '<h2>5-day Forecast</h2>';
-      const forecastContent = document.createElement('div');
-      forecastContent.classList.add('forecast-content');
+forecastTab.addEventListener("click", () => {
+  todayTab.classList.remove("active");
+  forecastTab.classList.add("active");
+  currentWeatherSection.classList.add("hidden");
+  forecastSection.classList.remove("hidden");
+});
 
-      data.list.forEach((item, index) => {
-        if (index % 8 === 0) { // Show forecast for every 24 hours
-          const date = new Date(item.dt * 1000).toLocaleDateString();
-          const time = new Date(item.dt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          const forecastCard = `
-            <div class="forecast-card">
-              <p>${date} ${time}</p>
-              <p><img src="https://openweathermap.org/img/wn/${item.weather[0].icon}@2x.png" alt="weather icon"> ${item.weather[0].description} ${getWeatherEmoji(item.weather[0].main)}</p>
-              <p>Temperature: ${Math.round(item.main.temp)}°C (Feels like: ${Math.round(item.main.feels_like)}°C)</p>
-              <p>Wind: ${item.wind.speed} m/s, ${item.wind.deg}°</p>
-            </div>
-          `;
-          forecastContent.innerHTML += forecastCard;
-        }
-      });
-
-      content.appendChild(forecastContent);
-    })
-    .catch(err => {
-      content.innerHTML = `<p>Error fetching forecast: ${err.message}</p>`;
-    });
-}
-
-function calculateDayDuration(sunrise, sunset) {
-  const duration = (sunset - sunrise) / 3600;
-  const hours = Math.floor(duration);
-  const minutes = Math.floor((duration - hours) * 60);
-  return `${hours}h ${minutes}m`;
-}
-
-function getWeatherEmoji(weather) {
-  switch (weather) {
-    case 'Clear':
-      return '☀️';
-    case 'Clouds':
-      return '☁️';
-    case 'Rain':
-      return '🌧️';
-    case 'Snow':
-      return '❄️';
-    case 'Thunderstorm':
-      return '⛈️';
-    case 'Drizzle':
-      return '🌦️';
-    case 'Mist':
-    case 'Fog':
-      return '🌫️';
-    default:
-      return '';
-  }
-}
-
-showTodayWeather();
+fetchWeather(currentCity);
+fetch5DayForecast(currentCity);
